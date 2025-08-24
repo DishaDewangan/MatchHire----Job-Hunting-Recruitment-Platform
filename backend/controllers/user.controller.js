@@ -7,7 +7,7 @@ import cloudinary from "../utils/cloudinary.js";
 export const register = async (req, res) => {
     try {
         const { fullname, email, phoneNumber, password, role } = req.body;
-         console.log(fullname, email, phoneNumber, password, role);
+        //  console.log(fullname, email, phoneNumber, password, role);
         if (!fullname || !email || !phoneNumber || !password || !role) {
             return res.status(400).json({
                 message: "Something is missing",
@@ -201,14 +201,20 @@ export const updateProfile = async (req, res) => {
 
     // ✅ If file is uploaded, process with Cloudinary
     if (file) {
-      const fileUri = getDataUri(file);
-      const cloudResponse = await cloudinary.uploader.upload(fileUri.content);
+  const fileUri = getDataUri(file);
 
-      if (cloudResponse) {
-        user.profile.resume = cloudResponse.secure_url;
-        user.profile.resumeOriginalName = file.originalname;
-      }
-    }
+  // Upload resume as raw file
+  const cloudResponse = await cloudinary.uploader.upload(fileUri.content, {
+    resource_type: "raw",
+    folder: "resumes"
+  });
+
+  if (cloudResponse) {
+    user.profile.resume = cloudResponse.secure_url;
+    user.profile.resumeOriginalName = file.originalname;
+  }
+}
+
 
     await user.save();
 
