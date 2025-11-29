@@ -183,13 +183,6 @@ For detailed deployment instructions, watch: [How to Deploy MERN Stack Projects]
 - ✅ Responsive design
 - ✅ Smooth animations
 
----
-
-## 🔗 **Resources**
-
-* **Source Tutorial**: [Stacky Patel's YouTube Channel](https://www.youtube.com/@stackypatel)
-* **Tutorial Video**: [Build a FullStack Job Portal App](https://www.youtube.com/watch?v=tutorial-video-id)
-* **Discord Community**: [Join Discord](https://discord.gg/your-discord-link)
 
 ---
 
