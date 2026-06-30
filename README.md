@@ -8,9 +8,9 @@
 ![JWT](https://img.shields.io/badge/JWT-Auth-000000?style=flat&logo=jsonwebtokens)
 ![Render](https://img.shields.io/badge/Deployed-Render-46E3B7?style=flat&logo=render)
 
-> A comprehensive full-stack job portal connecting job seekers with employers — featuring dual dashboards, JWT authentication, role-based access control, and real-time application tracking. Built with the **MERN Stack**.
+> A full-stack job portal connecting job seekers with employers — featuring dual dashboards, JWT authentication, and real-time application tracking. Built with the **MERN Stack**.
 
-🚀 **Live Demo:** [matchhire-job-hunting-recruitment.onrender.com](https://matchhire-job-hunting-recruitment.onrender.com/)  
+🚀 **Live Demo:** [matchhire-job-hunting-recruitment.onrender.com](https://matchhire-job-hunting-recruitment.onrender.com/)
 🐙 **GitHub:** [DishaDewangan/MatchHire](https://github.com/DishaDewangan/MatchHire----Job-Hunting-Recruitment-Platform)
 
 ---
@@ -26,42 +26,43 @@
 - [Setup & Installation](#setup--installation)
 - [Deployment](#deployment)
 - [Key Implementations](#key-implementations)
+- [Known Limitations](#known-limitations)
 
 ---
 
 ## 📖 Overview
 
-**MatchHire** is a production-ready job hunting and recruitment platform built from scratch using the MERN stack. It provides two distinct dashboards — one for job seekers and one for employers/admins — with secure JWT-based authentication, resume upload via Multer, cloud image storage via Cloudinary, and smooth UI powered by ShadCN and Framer Motion.
+**MatchHire** is a job hunting and recruitment platform built using the MERN stack. It provides two role-based experiences — **student** (job seeker) and **recruiter** (employer/admin) — with JWT-based authentication, resume/logo upload via Multer + Cloudinary, and a UI built with Radix/ShadCN-style components, Tailwind CSS, and Framer Motion.
 
 ---
 
 ## ✨ Features
 
-### 👤 For Job Seekers
-- Browse and search job listings with advanced filters (location, salary, job type)
-- Apply to jobs with resume upload
-- Track application status in real time
-- Update profile and resume anytime
+### 👤 For Job Seekers (`student` role)
+- Browse and search job listings with filters (location, salary, job type)
+- Apply to jobs (resume comes from the user's saved profile, not a per-application upload)
+- Track application status (Pending / Accepted / Rejected)
+- Update profile, skills, and resume from the Profile page
 - View complete application history
 
-### 🏢 For Employers / Admins
+### 🏢 For Employers / Admins (`recruiter` role)
 - Post and manage job listings
-- Create and manage company profiles
-- View, filter, and manage applicants
+- Create and manage company profiles (with logo upload)
+- View and manage applicants per job
 - Update application status (Accepted / Rejected / Pending)
-- Track recruitment metrics across multiple postings
 
 ### 🔐 Authentication & Security
-- Secure registration and login
-- JWT-based authentication with middleware-protected routes
-- Role-based access control (User / Admin)
-- Password encryption with bcrypt
+- Registration and login with email/password
+- JWT issued on login, stored in an httpOnly cookie
+- Passwords hashed with bcrypt
+- Routes protected by an `isAuthenticated` middleware that verifies the JWT
+- **Role gating (`student` vs `recruiter`) is enforced on the frontend only**, via a `ProtectedRoute` component that checks `user.role` before rendering admin pages — see [Known Limitations](#known-limitations)
 
 ### 🎨 UI / UX
-- Modern responsive design with Tailwind CSS
-- ShadCN UI component library
-- Smooth animations with Framer Motion
-- Mobile-friendly interface
+- Responsive design with Tailwind CSS
+- Radix UI primitives styled in a ShadCN-style component library (`src/components/ui`)
+- Animations with Framer Motion
+- Mobile-friendly layout
 
 ---
 
@@ -69,11 +70,11 @@
 
 | Layer | Technology |
 |-------|-----------|
-| **Frontend** | React.js (Vite), Redux Toolkit, React Router, Tailwind CSS, ShadCN UI, Framer Motion, Axios |
-| **Backend** | Node.js, Express.js, Mongoose, JWT, Bcrypt, Multer |
+| **Frontend** | React 19 (Vite), Redux Toolkit + redux-persist, React Router, Tailwind CSS, Radix UI / ShadCN-style components, Framer Motion, Axios |
+| **Backend** | Node.js, Express 5, Mongoose, JWT (jsonwebtoken), bcryptjs, Multer |
 | **Database** | MongoDB |
-| **Storage** | Cloudinary (images & resumes) |
-| **Deployment** | Render |
+| **Storage** | Cloudinary (profile photos, company logos, resumes) |
+| **Deployment** | Render (single service — Express serves the built React app) |
 
 ---
 
@@ -82,22 +83,32 @@
 ```
 MatchHire/
 │
+├── package.json            # Root deps + scripts (this is where "npm install" runs for the backend)
+│
 ├── backend/
-│   ├── controllers/       # Route logic
-│   ├── middleware/        # Auth & role guards
-│   ├── models/            # Mongoose schemas (User, Company, Job, Application)
-│   ├── routes/            # API route definitions
-│   ├── utils/             # Helper functions
-│   └── index.js           # Server entry point
+│   ├── controllers/        # Route logic (user, company, job, application)
+│   ├── middlewares/        # isAuthenticated.js (JWT check only, no role guard), mutler.js (Multer upload)
+│   ├── models/             # Mongoose schemas (User, Company, Job, Application)
+│   ├── routes/             # API route definitions
+│   ├── utils/              # db.js, cloudinary.js, datauri.js
+│   └── index.js            # Server entry point (also serves frontend/dist in production)
 │
 ├── frontend/
-│   ├── src/
-│   │   ├── components/    # Reusable UI components
-│   │   ├── hooks/         # Custom React hooks
-│   │   ├── redux/         # Redux store & slices
-│   │   ├── pages/         # Route-level page components
-│   │   └── App.jsx
-│   └── package.json
+│   ├── package.json
+│   ├── redux/               # Redux store & slices (NOT under src/)
+│   │   ├── store.js
+│   │   ├── authSlice.js
+│   │   ├── jobSlice.js
+│   │   ├── companySlice.js
+│   │   └── applicationSlice.js
+│   └── src/
+│       ├── components/      # Page-level views live here too (no separate "pages/" folder)
+│       │   ├── admin/        # Recruiter pages + ProtectedRoute.jsx
+│       │   ├── auth/         # Login.jsx, Signup.jsx
+│       │   └── ui/           # Reusable ShadCN-style UI primitives
+│       ├── hooks/            # Custom data-fetching hooks
+│       ├── utils/constant.js # Hardcoded API base URLs (see Setup notes)
+│       └── App.jsx           # Route definitions
 │
 └── README.md
 ```
@@ -109,20 +120,20 @@ MatchHire/
 ```
 User visits MatchHire
        ↓
-Register / Login (JWT issued)
+Register / Login (JWT issued, stored in httpOnly cookie)
        ↓
-Role Detection (Job Seeker / Admin)
+Role Detection (student / recruiter) — checked client-side after login
        ↓
      ┌──────────────────────────────────┐
-     │ Job Seeker        │    Admin     │
-     │ Browse Jobs       │  Post Jobs   │
-     │ Apply + Upload CV │  View Apps   │
-     │ Track Status      │  Manage Co.  │
+     │ Student (Job Seeker) │  Recruiter (Admin)│
+     │ Browse Jobs          │  Post Jobs         │
+     │ Apply for jobs        │  View Applicants   │
+     │ Track Status          │  Manage Companies  │
      └──────────────────────────────────┘
        ↓
-Redux State persisted across 10+ pages
+Redux state persisted (redux-persist) across 14 frontend routes
        ↓
-MongoDB ← REST API (15+ endpoints) → React UI
+MongoDB ← REST API (16 endpoints) → React UI
 ```
 
 ---
@@ -132,15 +143,23 @@ MongoDB ← REST API (15+ endpoints) → React UI
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | POST | `/api/v1/user/register` | Register new user |
-| POST | `/api/v1/user/login` | Login & get JWT |
-| GET | `/api/v1/job/get` | Get all jobs |
-| POST | `/api/v1/job/post` | Post a new job (Admin) |
-| POST | `/api/v1/application/apply/:id` | Apply to a job |
-| GET | `/api/v1/application/get` | Get user applications |
+| POST | `/api/v1/user/login` | Login & receive JWT cookie |
+| GET | `/api/v1/user/logout` | Clear auth cookie |
+| POST | `/api/v1/user/profile/update` | Update profile (auth required) |
+| GET | `/api/v1/job/get` | Get all jobs (supports `?keyword=`) |
+| GET | `/api/v1/job/get/:id` | Get a single job |
+| GET | `/api/v1/job/getadminjobs` | Get jobs created by the logged-in recruiter |
+| POST | `/api/v1/job/post` | Post a new job (auth required) |
+| GET | `/api/v1/application/apply/:id` | Apply to a job (auth required) — **GET, not POST** |
+| GET | `/api/v1/application/get` | Get the logged-in user's applications |
+| GET | `/api/v1/application/:id/applicants` | Get applicants for a job |
+| POST | `/api/v1/application/status/:id/update` | Update an application's status |
 | POST | `/api/v1/company/register` | Register a company |
-| GET | `/api/v1/company/get` | Get companies |
+| GET | `/api/v1/company/get` | Get companies owned by the logged-in user |
+| GET | `/api/v1/company/get/:id` | Get a single company |
+| PUT | `/api/v1/company/update/:id` | Update a company (incl. logo upload) |
 
-> 15+ REST API endpoints total across User, Job, Company, and Application routes.
+> 16 REST API endpoints total across User, Job, Company, and Application routes. All routes except `register`/`login` require a valid JWT cookie (`isAuthenticated` middleware) — none of them additionally check `role` server-side.
 
 ---
 
@@ -153,12 +172,14 @@ cd MatchHire----Job-Hunting-Recruitment-Platform
 ```
 
 **2. Backend Setup**
+
+> ⚠️ There is **no `backend/package.json`** — all backend dependencies and scripts live in the **root** `package.json`. Run `npm install` from the project root, not from inside `backend/`.
+
 ```bash
-cd backend
 npm install
 ```
 
-Create a `.env` file in the `backend/` directory:
+Create a `.env` file in the **`backend/`** directory:
 ```env
 PORT=8000
 MONGO_URI=your_mongodb_connection_string
@@ -168,20 +189,16 @@ API_KEY=your_cloudinary_api_key
 API_SECRET=your_cloudinary_api_secret
 ```
 
-Start the backend:
+Start the backend (from the project root):
 ```bash
 npm run dev
 ```
+This runs `nodemon backend/index.js`.
 
 **3. Frontend Setup**
 ```bash
 cd frontend
 npm install
-```
-
-Create a `.env` file in the `frontend/` directory:
-```env
-VITE_API_URL=http://localhost:8000/api/v1
 ```
 
 Start the frontend:
@@ -193,14 +210,14 @@ npm run dev
 
 ## 🚀 Deployment
 
-The application is deployed on **Render** (both frontend and backend).
+The application is deployed on **Render** as a **single service**: in production, Express (`backend/index.js`) serves the built React app from `frontend/dist` and handles all `/api/v1/*` routes itself — there's no separate frontend service or `VITE_API_URL` to configure at deploy time.
 
 To deploy your own instance:
 1. Create a [Render](https://render.com) account
 2. Connect your GitHub repository
-3. Configure environment variables in the Render dashboard
-4. Deploy backend and frontend as separate services
-5. Update `VITE_API_URL` in frontend `.env` to point to your live backend URL
+3. Set the build command to `npm run build` (root script — installs backend + frontend deps and builds the frontend) and the start command to `npm start`
+4. Configure the backend environment variables (`MONGO_URI`, `SECRET_KEY`, Cloudinary keys, `PORT`) in the Render dashboard
+5. Update the hardcoded CORS `origin` in `backend/index.js` and the API URLs in `frontend/src/utils/constant.js` to match your deployed domain before building
 
 ---
 
@@ -208,25 +225,25 @@ To deploy your own instance:
 
 | Feature | Status |
 |---------|--------|
-| User authentication & authorization | ✅ |
-| JWT + role-based access control | ✅ |
+| User authentication (JWT + bcrypt) | ✅ |
+| Role-aware UI (student / recruiter) | ✅ |
 | Job posting & management | ✅ |
 | Company profile creation | ✅ |
-| Resume/CV upload with Multer | ✅ |
+| Resume/logo upload via Multer + Cloudinary | ✅ |
 | Application tracking system | ✅ |
-| Advanced job search & filtering | ✅ |
-| Admin dashboard | ✅ |
+| Job search & keyword filtering | ✅ |
+| Recruiter dashboard | ✅ |
 | Applicant status management | ✅ |
-| Redux state persistence (10+ pages) | ✅ |
-| Protected routes | ✅ |
+| Redux state persistence (redux-persist) | ✅ |
+| Frontend protected routes | ✅ |
 | Responsive design | ✅ |
-| Smooth animations (Framer Motion) | ✅ |
+| Animations (Framer Motion) | ✅ |
 
 ---
 
 ## 👩‍💻 Author
 
-**Disha Dewangan**  
+**Disha Dewangan**
 [![GitHub](https://img.shields.io/badge/GitHub-DishaDewangan-black?style=flat&logo=github)](https://github.com/DishaDewangan)
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-Disha%20Dewangan-blue?style=flat&logo=linkedin)](https://www.linkedin.com/in/disha-dewangan-9a0071291/)
 [![LeetCode](https://img.shields.io/badge/LeetCode-DishaDewangan-orange?style=flat&logo=leetcode)](https://leetcode.com/DishaDewangan/)
