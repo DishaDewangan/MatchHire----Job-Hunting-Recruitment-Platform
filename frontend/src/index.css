@@ -116,5 +116,51 @@
   }
   body {
     @apply bg-background text-foreground;
+    transition: background-color 200ms ease, color 200ms ease;
   }
+}
+
+[data-theme="light"] body {
+  background: #fff7f7;
+  color: #1f2937;
+}
+
+[data-theme="light"] [class~="bg-black"],
+[data-theme="light"] [class*="bg-[#000000]"],
+[data-theme="light"] [class*="bg-[#0A0A0A]"] {
+  background-color: #fff7f7 !important;
+}
+
+[data-theme="light"] [class*="bg-white/10"] {
+  background-color: #ffffff !important;
+}
+
+[data-theme="light"] [class*="bg-[#1a1a1a]"] {
+  background-color: #ffffff !important;
+}
+
+[data-theme="light"] [class~="text-white"],
+[data-theme="light"] [class*="text-[#FFDEDE]"],
+[data-theme="light"] [class*="text-[#FFBABA]"],
+[data-theme="light"] [class*="text-[#FF9F9F]"],
+[data-theme="light"] [class~="text-gray-300"],
+[data-theme="light"] [class~="text-gray-400"],
+[data-theme="light"] [class~="text-gray-500"] {
+  color: #1f2937 !important;
+}
+
+[data-theme="light"] [class*="placeholder-gray-400"]::placeholder {
+  color: #6b7280 !important;
+  opacity: 1;
+}
+
+[data-theme="light"] [class*="border-[#CF0F47]"],
+[data-theme="light"] [class*="border-[#FF0B55]"] {
+  border-color: #cf0f47 !important;
+}
+
+[data-theme="dark"] .job-card {
+  background: #111111 !important;
+  border-left: 3px solid #cf0f47;
+  box-shadow: 0 6px 18px rgb(0 0 0 / 35%);
 }

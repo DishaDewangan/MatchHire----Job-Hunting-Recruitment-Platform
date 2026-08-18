@@ -11,7 +11,7 @@ import { toast } from 'sonner'
 const JobDescription = () => {
     const { singleJob } = useSelector(store => store.job)
     const { user } = useSelector(store => store.auth)
-    const isInitiallyApplied = singleJob?.applications?.some(application => application.applicant === user?._id) || false
+    const isInitiallyApplied = singleJob?.applications?.some(application => String(application.applicant?._id ?? application.applicant) === String(user?._id)) || false
     const [isApplied, setIsApplied] = useState(isInitiallyApplied)
 
     const params = useParams()
@@ -43,7 +43,7 @@ const JobDescription = () => {
                 const res = await axios.get(`${JOB_API_END_POINT}/get/${jobId}`, { withCredentials: true })
                 if (res.data.success) {
                     dispatch(setSingleJob(res.data.job))
-                    setIsApplied(res.data.job.applications.some(application => application.applicant === user?._id))
+                    setIsApplied(res.data.job.applications.some(application => String(application.applicant?._id ?? application.applicant) === String(user?._id)))
                 }
             } catch (error) {
                 console.log(error)
@@ -59,7 +59,7 @@ const JobDescription = () => {
                     <h1 className="font-bold text-2xl text-[#CF0F47]">{singleJob?.title}</h1>
                     <div className="flex items-center gap-2 mt-4 flex-wrap">
                         <Badge className="text-[#0B5DFF] font-bold bg-white border border-[#0B5DFF]" variant="ghost">
-                            {singleJob?.postion} Positions
+                            {singleJob?.position} Positions
                         </Badge>
                         <Badge className="text-[#F83002] font-bold bg-white border border-[#F83002]" variant="ghost">
                             {singleJob?.jobType}
@@ -85,7 +85,7 @@ const JobDescription = () => {
                 <h1><span className="font-bold">Role:</span> <span className="pl-4">{singleJob?.title}</span></h1>
                 <h1><span className="font-bold">Location:</span> <span className="pl-4">{singleJob?.location}</span></h1>
                 <h1><span className="font-bold">Description:</span> <span className="pl-4">{singleJob?.description}</span></h1>
-                <h1><span className="font-bold">Experience:</span> <span className="pl-4">{singleJob?.experience} yrs</span></h1>
+                        <h1><span className="font-bold">Experience:</span> <span className="pl-4">{singleJob?.experienceLevel} yrs</span></h1>
                 <h1><span className="font-bold">Salary:</span> <span className="pl-4">{singleJob?.salary} LPA</span></h1>
                 <h1><span className="font-bold">Total Applicants:</span> <span className="pl-4">{singleJob?.applications?.length}</span></h1>
                 <h1><span className="font-bold">Posted Date:</span> <span className="pl-4">{singleJob?.createdAt.split("T")[0]}</span></h1>

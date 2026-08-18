@@ -1,4 +1,5 @@
 import { Company } from "../models/company.model.js";
+import { Job } from "../models/job.model.js";
 import getDataUri from "../utils/datauri.js";
 import cloudinary from "../utils/cloudinary.js";
 
@@ -38,15 +39,24 @@ export const registerCompany = async (req, res) => {
 export const getCompany = async (req, res) => {
     try {
         const userId = req.id; // logged in user id
-        const companies = await Company.find({ userId });
+        const companies = await Company.find({ userId }).lean();
         if (!companies) {
             return res.status(404).json({
                 message: "Companies not found.",
                 success: false
             })
         }
+        const companiesWithCounts = await Promise.all(companies.map(async (company) => {
+          const jobs = await Job.find({ company: company._id }, { applications: 1 }).lean();
+          return {
+            ...company,
+            jobCount: jobs.length,
+            applicantCount: jobs.reduce((total, job) => total + (job.applications?.length || 0), 0)
+          };
+        }));
+
         return res.status(200).json({
-            companies,
+          companies: companiesWithCounts,
             success:true
         })
     } catch (error) {
@@ -58,7 +68,7 @@ export const getCompany = async (req, res) => {
 export const getCompanyById = async (req, res) => {
   try {
     const companyId = req.params.id;
-    const company = await Company.findById(companyId);
+    const company = await Company.findOne({ _id: companyId, userId: req.id });
     if (!company) {
       return res.status(404).json({
         message: "Company not found.",
@@ -79,15 +89,15 @@ export const updateCompany = async (req, res) => {
   try {
     const { name, description, website, location } = req.body;
     const file = req.file;
-    // idhar cloudinary ayega
-    const fileUri = getDataUri(file);
-    const cloudResponse = await cloudinary.uploader.upload(fileUri.content);
-    const logo = cloudResponse.secure_url;
-
-    const updateData = { name, description, website, location, logo };
+    const updateData = { name, description, website, location };
+    if (file) {
+      const fileUri = getDataUri(file);
+      const cloudResponse = await cloudinary.uploader.upload(fileUri.content);
+      updateData.logo = cloudResponse.secure_url;
+    }
 
     const company = await Company.findByIdAndUpdate(
-      req.params.id,
+      { _id: req.params.id, userId: req.id },
       updateData,
       { new: true }
     );

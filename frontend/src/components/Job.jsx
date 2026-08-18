@@ -5,7 +5,7 @@ import { Avatar, AvatarImage } from './ui/avatar';
 import { Badge } from './ui/badge';
 import { useNavigate } from 'react-router-dom';
 
-const Job = ({ job }) => {
+const Job = ({ job, onSavedChange }) => {
   const navigate = useNavigate();
   const [saved, setSaved] = useState(false);
 
@@ -36,10 +36,11 @@ const Job = ({ job }) => {
     }
 
     localStorage.setItem('savedJobs', JSON.stringify(savedJobs));
+    onSavedChange?.(savedJobs);
   };
 
   return (
-    <div className="bg-[#0A0A0A] border border-[#CF0F47] shadow-[0_0_10px_#FF0B55] rounded-xl p-5 flex flex-col justify-between h-full hover:shadow-[0_0_20px_#FF0B55] transition-all duration-300">
+    <div className="job-card bg-[#0A0A0A] shadow-[0_4px_16px_rgba(255,11,85,0.16)] rounded-xl p-5 flex flex-col justify-between h-full hover:shadow-[0_8px_24px_rgba(255,11,85,0.24)] transition-all duration-300">
       {/* Date + Bookmark */}
       <div className="flex items-center justify-between">
         <p className="text-sm text-[#FFDEDE]">
@@ -50,7 +51,7 @@ const Job = ({ job }) => {
         <Button
           onClick={handleSaveJob}
           variant="outline"
-          className={`rounded-full border-[#FF0B55] ${saved ? 'bg-[#CF0F47] text-white' : 'text-[#FF0B55]'} hover:bg-[#CF0F47]/20`}
+          className={`rounded-full border-0 ${saved ? 'bg-[#CF0F47] text-white' : 'text-[#FF0B55]'} hover:bg-[#CF0F47]/20`}
           size="icon"
         >
           <Bookmark fill={saved ? '#fff' : 'none'} />
@@ -93,7 +94,7 @@ const Job = ({ job }) => {
       <div className="flex items-center gap-3 mt-5">
         <Button
           onClick={() => navigate(`/description/${job?._id}`)}
-          className="bg-black text-[#FFDEDE] border border-[#CF0F47] hover:bg-[#CF0F47]/20"
+          className="bg-black text-[#FFDEDE] border-0 hover:bg-[#CF0F47]/20"
           variant="outline"
         >
           Details

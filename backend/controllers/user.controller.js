@@ -1,8 +1,23 @@
 import { User } from "../models/user.model.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import fs from "fs/promises";
+import path from "path";
+import { randomUUID } from "crypto";
+import https from "https";
 import getDataUri from "../utils/datauri.js";
 import cloudinary from "../utils/cloudinary.js";
+
+// Helper: Test if a URL is publicly accessible
+const isUrlAccessible = (url) => {
+  return new Promise((resolve) => {
+    https.head(url, (res) => {
+      resolve(res.statusCode >= 200 && res.statusCode < 300);
+    }).on('error', () => {
+      resolve(false);
+    });
+  });
+};
 
 export const register = async (req, res) => {
     try {
@@ -14,10 +29,7 @@ export const register = async (req, res) => {
                 success: false
             });
         };
-        const file = req.file;
-        const fileUri = getDataUri(file);
-        const cloudResponse = await cloudinary.uploader.upload(fileUri.content);
-
+        
         const user = await User.findOne({ email });
         if (user) {
             return res.status(400).json({
@@ -25,7 +37,26 @@ export const register = async (req, res) => {
                 success: false,
             })
         }
+        
         const hashedPassword = await bcrypt.hash(password, 10);
+        
+        // Handle profile photo - optional, only upload if file is provided
+        let profilePhoto = "";
+        const file = req.file;
+        if (file) {
+          const safeFilename = file.originalname.replace(/\s+/g, '_');
+          try {
+            const fileUri = getDataUri(file);
+            const cloudResponse = await cloudinary.uploader.upload(fileUri.content);
+            profilePhoto = cloudResponse.secure_url;
+          } catch (uploadError) {
+            const uploadDirectory = path.resolve("uploads", "profile-photos");
+            await fs.mkdir(uploadDirectory, { recursive: true });
+            const localFilename = `${randomUUID()}-${safeFilename}`;
+            await fs.writeFile(path.join(uploadDirectory, localFilename), file.buffer);
+            profilePhoto = `${req.protocol}://${req.get("host")}/uploads/profile-photos/${encodeURIComponent(localFilename)}`;
+          }
+        }
 
         await User.create({
             fullname,
@@ -34,7 +65,7 @@ export const register = async (req, res) => {
             password: hashedPassword,
             role,
             profile:{
-                profilePhoto:cloudResponse.secure_url,
+                profilePhoto: profilePhoto,
             }
         });
 
@@ -44,6 +75,10 @@ export const register = async (req, res) => {
         });
     } catch (error) {
         console.log(error);
+        return res.status(500).json({
+            message: "Error during registration.",
+            success: false
+        });
     }
 }
 export const login = async (req, res) => {
@@ -92,7 +127,7 @@ export const login = async (req, res) => {
             profile: user.profile
         }
 
-        return res.status(200).cookie("token", token, { maxAge: 1 * 24 * 60 * 60 * 1000, httpsOnly: true, sameSite: 'strict' }).json({
+        return res.status(200).cookie("token", token, { maxAge: 1 * 24 * 60 * 60 * 1000, httpOnly: true, sameSite: 'strict' }).json({
             message: `Welcome back ${user.fullname}`,
             user,
             success: true
@@ -175,7 +210,6 @@ export const logout = async (req, res) => {
 export const updateProfile = async (req, res) => {
   try {
     const { fullname, email, phoneNumber, bio, skills } = req.body;
-    const file = req.file;
     const userId = req.id; // From auth middleware
 
     // ✅ First, find the user
@@ -187,33 +221,91 @@ export const updateProfile = async (req, res) => {
       });
     }
 
+    const file = user.role === "student" ? req.files?.file?.[0] : null;
+    const profilePhoto = req.files?.profilePhoto?.[0];
+
     // ✅ Prepare updated values
-    if (fullname) user.fullname = fullname;
-    if (email) user.email = email;
-    if (phoneNumber) user.phoneNumber = phoneNumber;
+    if (fullname !== undefined) user.fullname = fullname;
+    if (email !== undefined) user.email = email;
+    if (phoneNumber !== undefined) user.phoneNumber = phoneNumber;
 
     if (!user.profile) user.profile = {};
-    if (bio) user.profile.bio = bio;
-    if (skills) {
+    if (bio !== undefined) user.profile.bio = bio;
+    if (user.role === "student" && skills !== undefined) {
       const skillsArray = skills.split(',').map(skill => skill.trim());
       user.profile.skills = skillsArray;
     }
 
+    if (profilePhoto) {
+      const photoFilename = profilePhoto.originalname.replace(/\s+/g, '_');
+      const photoPublicId = `${path.parse(photoFilename).name}-${randomUUID()}`;
+      try {
+        const cloudResponse = await new Promise((resolve, reject) => {
+          const uploadStream = cloudinary.uploader.upload_stream(
+            {
+              resource_type: "image",
+              folder: "profile-photos",
+              public_id: photoPublicId
+            },
+            (error, result) => error ? reject(error) : resolve(result)
+          );
+          uploadStream.end(profilePhoto.buffer);
+        });
+        user.profile.profilePhoto = cloudResponse.secure_url;
+      } catch (uploadError) {
+        const uploadDirectory = path.resolve("uploads", "profile-photos");
+        await fs.mkdir(uploadDirectory, { recursive: true });
+        const localFilename = `${randomUUID()}-${photoFilename}`;
+        await fs.writeFile(path.join(uploadDirectory, localFilename), profilePhoto.buffer);
+        user.profile.profilePhoto = `${req.protocol}://${req.get("host")}/uploads/profile-photos/${encodeURIComponent(localFilename)}`;
+      }
+    }
+
     // ✅ If file is uploaded, process with Cloudinary
     if (file) {
-  const fileUri = getDataUri(file);
+      const safeFilename = file.originalname.replace(/\s+/g, '_');
+      const publicId = path.parse(safeFilename).name;
 
-  // Upload resume as raw file
-  const cloudResponse = await cloudinary.uploader.upload(fileUri.content, {
-    resource_type: "raw",
-    folder: "resumes"
-  });
+      // Keep the original extension so the browser saves the file as a PDF
+      try {
+        const cloudResponse = await new Promise((resolve, reject) => {
+          const uploadStream = cloudinary.uploader.upload_stream(
+            {
+              resource_type: "image",
+              folder: "resumes",
+              public_id: publicId,
+              format: "pdf",
+              type: "upload"
+            },
+            (error, result) => {
+              if (error) reject(error);
+              else resolve(result);
+            }
+          );
 
-  if (cloudResponse) {
-    user.profile.resume = cloudResponse.secure_url;
-    user.profile.resumeOriginalName = file.originalname;
-  }
-}
+          uploadStream.end(file.buffer);
+        });
+
+        // Test if the Cloudinary URL is publicly accessible
+        const resumeUrl = `${cloudResponse.secure_url}?fl_attachment=false`;
+        const isAccessible = await isUrlAccessible(resumeUrl);
+        
+        if (isAccessible) {
+          user.profile.resume = resumeUrl;
+        } else {
+          // Cloudinary delivered the file but it's not publicly accessible; fall back to local
+          throw new Error("Cloudinary URL not publicly accessible");
+        }
+      } catch (uploadError) {
+        // Keep local development usable; fall back to local storage on any error
+        const uploadDirectory = path.resolve("uploads", "resumes");
+        await fs.mkdir(uploadDirectory, { recursive: true });
+        const localFilename = `${randomUUID()}-${safeFilename}`;
+        await fs.writeFile(path.join(uploadDirectory, localFilename), file.buffer);
+        user.profile.resume = `${req.protocol}://${req.get("host")}/uploads/resumes/${encodeURIComponent(localFilename)}`;
+      }
+      user.profile.resumeOriginalName = file.originalname;
+    }
 
 
     await user.save();
@@ -236,6 +328,7 @@ export const updateProfile = async (req, res) => {
 
   } catch (error) {
     console.log("Update Profile Error:", error);
+
     res.status(500).json({
       message: "Internal Server Error",
       success: false

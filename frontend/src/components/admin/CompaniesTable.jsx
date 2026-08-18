@@ -42,6 +42,8 @@ const CompaniesTable = () => {
           <TableRow>
             <TableHead className="font-semibold text-gray-800">Logo</TableHead>
             <TableHead className="font-semibold text-gray-800">Name</TableHead>
+            <TableHead className="font-semibold text-gray-800">Jobs</TableHead>
+            <TableHead className="font-semibold text-gray-800">Applicants</TableHead>
             <TableHead className="font-semibold text-gray-800">Date</TableHead>
             <TableHead className="text-right font-semibold text-gray-800">Action</TableHead>
           </TableRow>
@@ -59,6 +61,8 @@ const CompaniesTable = () => {
                 </Avatar>
               </TableCell>
               <TableCell className="font-medium">{company.name}</TableCell>
+              <TableCell>{company.jobCount || 0}</TableCell>
+              <TableCell>{company.applicantCount || 0}</TableCell>
               <TableCell>{company.createdAt.split('T')[0]}</TableCell>
               <TableCell className="text-right">
                 <Popover>

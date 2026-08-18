@@ -1,9 +1,9 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { User2, LogOut } from "lucide-react";
+import { User2, LogOut, Moon, Sun } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { USER_API_END_POINT } from "@/utils/constant";
 import { toast } from "sonner";
@@ -12,8 +12,14 @@ import axios from "axios";
 
 const Navbar = () => {
   const { user } = useSelector((store) => store.auth);
+  const [isLightMode, setIsLightMode] = useState(() => localStorage.getItem("theme") === "light");
   const dispatch = useDispatch();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = isLightMode ? "light" : "dark";
+    localStorage.setItem("theme", isLightMode ? "light" : "dark");
+  }, [isLightMode]);
 
   const logoutHandler = async () => {
     try {
@@ -84,13 +90,29 @@ const Navbar = () => {
                   Browse
                 </Link>
               </li>
+              <li>
+                <Link
+                  to="/saved-jobs"
+                  className="hover:text-[#FF0B55] transition-colors duration-300"
+                >
+                  Saved Jobs
+                </Link>
+              </li>
             </>
           )}
         </ul>
 
         {/* Auth Buttons or User Avatar */}
         {!user ? (
-          <div className="flex gap-4">
+          <div className="flex items-center gap-4">
+            <button
+              type="button"
+              onClick={() => setIsLightMode((currentMode) => !currentMode)}
+              aria-label={isLightMode ? "Switch to dark mode" : "Switch to light mode"}
+              className="rounded-full p-2 text-[#FFDEDE] hover:bg-[#CF0F47] transition"
+            >
+              {isLightMode ? <Moon size={18} /> : <Sun size={18} />}
+            </button>
             <Link to="/login">
               <Button
                 variant="outline"
@@ -106,15 +128,30 @@ const Navbar = () => {
             </Link>
           </div>
         ) : (
-          <Popover>
-            <PopoverTrigger asChild>
-              <Avatar className="cursor-pointer ring-2 ring-[#FF0B55]">
-                <AvatarImage
-                  src={user?.profile?.profilePhoto}
-                  alt={user?.fullname || "User"}
-                />
-              </Avatar>
-            </PopoverTrigger>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setIsLightMode((currentMode) => !currentMode)}
+              aria-label={isLightMode ? "Switch to dark mode" : "Switch to light mode"}
+              className="rounded-full p-2 text-[#FFDEDE] hover:bg-[#CF0F47] transition"
+            >
+              {isLightMode ? <Moon size={18} /> : <Sun size={18} />}
+            </button>
+            <Popover>
+              <PopoverTrigger asChild>
+                <button className="flex items-center gap-3 text-left text-[#FFDEDE]">
+                <div className="hidden sm:block">
+                  <p className="font-semibold leading-tight">{user?.fullname}</p>
+                  <p className="text-xs text-[#FF9F9F]">{user?.role === "student" ? "Candidate" : "Recruiter"}</p>
+                </div>
+                <Avatar className="cursor-pointer ring-2 ring-[#FF0B55]">
+                  <AvatarImage
+                    src={user?.profile?.profilePhoto}
+                    alt={user?.fullname || "User"}
+                  />
+                </Avatar>
+                </button>
+              </PopoverTrigger>
             <PopoverContent className="w-80 bg-[#FFDEDE] text-[#000000]">
               <div className="flex gap-4 space-y-2">
                 <Avatar className="cursor-pointer ring-2 ring-[#CF0F47]">
@@ -131,7 +168,7 @@ const Navbar = () => {
                 </div>
               </div>
               <div className="flex flex-col my-4 text-[#000000] space-y-3">
-                {user && user.role === "student" && (
+                {user && (user.role === "student" || user.role === "recruiter") && (
                   <div className="flex items-center gap-2 cursor-pointer text-[#CF0F47] hover:text-[#FF0B55] transition">
                     <User2 />
                     <Button variant="link" className="text-[#CF0F47] hover:text-[#FF0B55]">
@@ -147,7 +184,8 @@ const Navbar = () => {
                 </div>
               </div>
             </PopoverContent>
-          </Popover>
+            </Popover>
+          </div>
         )}
       </div>
     </nav>

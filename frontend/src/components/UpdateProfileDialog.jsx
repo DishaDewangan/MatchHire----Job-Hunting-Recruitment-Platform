@@ -30,6 +30,7 @@ const UpdateProfileDialog = ({ open, setOpen }) => {
       ? user.profile.skills.join(', ')
       : '',
     file: null,
+    profilePhoto: null,
   });
 
   const changeEventHandler = (e) => {
@@ -39,6 +40,11 @@ const UpdateProfileDialog = ({ open, setOpen }) => {
   const fileChangeHandler = (e) => {
     const file = e.target.files?.[0];
     setInput({ ...input, file });
+  };
+
+  const profilePhotoChangeHandler = (e) => {
+    const profilePhoto = e.target.files?.[0];
+    setInput({ ...input, profilePhoto });
   };
 
   const submitHandler = async (e) => {
@@ -55,6 +61,9 @@ const UpdateProfileDialog = ({ open, setOpen }) => {
 
     if (input.file instanceof File) {
       formData.append('file', input.file);
+    }
+    if (input.profilePhoto instanceof File) {
+      formData.append('profilePhoto', input.profilePhoto);
     }
 
     try {
@@ -135,48 +144,69 @@ const UpdateProfileDialog = ({ open, setOpen }) => {
               />
             </div>
 
+            {/* Profile photo */}
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="profilePhoto" className="text-right">
+                Photo
+              </Label>
+              <Input
+                id="profilePhoto"
+                name="profilePhoto"
+                type="file"
+                accept="image/*"
+                onChange={profilePhotoChangeHandler}
+                className="col-span-3"
+              />
+            </div>
+
             {/* Bio */}
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="bio" className="text-right">
                 Bio
               </Label>
-              <Input
+              <textarea
                 id="bio"
                 name="bio"
                 value={input.bio}
                 onChange={changeEventHandler}
-                className="col-span-3"
+                rows={4}
+                placeholder="Tell us about yourself"
+                className="col-span-3 rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]"
               />
             </div>
 
-            {/* Skills */}
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="skills" className="text-right">
-                Skills
-              </Label>
-              <Input
-                id="skills"
-                name="skills"
-                value={input.skills}
-                onChange={changeEventHandler}
-                className="col-span-3"
-              />
-            </div>
+            {user?.role === 'student' && (
+              <>
+                {/* Skills */}
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="skills" className="text-right">
+                    Skills
+                  </Label>
+                  <Input
+                    id="skills"
+                    name="skills"
+                    value={input.skills}
+                    onChange={changeEventHandler}
+                    className="col-span-3"
+                  />
+                </div>
 
-            {/* Resume */}
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="file" className="text-right">
-                Resume
-              </Label>
-              <input
-                id="file"
-                name="file"
-                type="file"
-                accept="application/pdf"
-                onChange={fileChangeHandler}
-                className="col-span-3 border rounded px-2 py-1"
-              />
-            </div>
+                {/* Resume */}
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="file" className="text-right">
+                    Resume
+                  </Label>
+                  <input
+                    id="file"
+                    name="file"
+                    type="file"
+                    accept="application/pdf"
+                    onChange={fileChangeHandler}
+                    className="col-span-3 border rounded px-2 py-1"
+                  />
+                </div>
+              </>
+            )}
           </div>
 
           <DialogFooter>

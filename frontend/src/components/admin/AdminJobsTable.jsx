@@ -33,6 +33,7 @@ const AdminJobsTable = () => {
           <TableRow className="bg-[#FFDEDE]">
             <TableHead className="text-[#CF0F47] font-semibold">Company Name</TableHead>
             <TableHead className="text-[#CF0F47] font-semibold">Role</TableHead>
+            <TableHead className="text-[#CF0F47] font-semibold">Applicants</TableHead>
             <TableHead className="text-[#CF0F47] font-semibold">Date</TableHead>
             <TableHead className="text-right text-[#CF0F47] font-semibold">Action</TableHead>
           </TableRow>
@@ -45,6 +46,7 @@ const AdminJobsTable = () => {
             >
               <TableCell>{job?.company?.name}</TableCell>
               <TableCell>{job?.title}</TableCell>
+              <TableCell>{job?.applicantCount || 0}</TableCell>
               <TableCell>{job?.createdAt.split('T')[0]}</TableCell>
               <TableCell className="text-right cursor-pointer">
                 <Popover>
@@ -53,7 +55,7 @@ const AdminJobsTable = () => {
                   </PopoverTrigger>
                   <PopoverContent className="w-36 bg-white shadow-lg border border-[#FFB6B6]">
                     <div
-                      onClick={() => navigate(`/admin/companies/${job._id}`)}
+                      onClick={() => navigate(`/admin/jobs/${job._id}/edit`)}
                       className="flex items-center gap-2 w-fit cursor-pointer text-[#CF0F47] hover:text-[#b50d3d] transition"
                     >
                       <Edit2 className="w-4" />

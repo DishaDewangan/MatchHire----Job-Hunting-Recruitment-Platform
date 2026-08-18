@@ -66,7 +66,7 @@ export const getAppliedJobs = async (req, res) => {
 export const getApplicants = async (req, res) => {
     try {
         const { id } = req.params;
-        const job = await Job.findById(id).populate({
+        const job = await Job.findOne({ _id: id, created_by: req.id }).populate({
             path:"applications",
             options:{sort:{createdAt:-1}},
             populate:{
@@ -103,9 +103,9 @@ export const updateStatus = async (req, res) => {
         }
 
         // Find the application by applicant ID
-        const application = await Application.findOne({ _id: applicantionId});
+        const application = await Application.findById(applicantionId).populate("job");
 
-        if (!application) {
+        if (!application || String(application.job?.created_by) !== String(req.id)) {
             return res.status(404).json({
                 message: "Application not found.",
                 success: false
