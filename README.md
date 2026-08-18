@@ -8,7 +8,7 @@
 ![JWT](https://img.shields.io/badge/JWT-Auth-000000?style=flat&logo=jsonwebtokens)
 ![Render](https://img.shields.io/badge/Deployed-Render-46E3B7?style=flat&logo=render)
 
-> A full-stack job portal connecting job seekers with employers — featuring dual dashboards, JWT authentication, and real-time application tracking. Built with the **MERN Stack**.
+> A full-stack job portal connecting job seekers with employers — featuring dual dashboards, JWT authentication, and application status tracking. Built with the **MERN Stack**.
 
 🚀 **Live Demo:** [matchhire-job-hunting-recruitment.onrender.com](https://matchhire-job-hunting-recruitment.onrender.com/)
 🐙 **GitHub:** [DishaDewangan/MatchHire](https://github.com/DishaDewangan/MatchHire----Job-Hunting-Recruitment-Platform)
@@ -26,7 +26,6 @@
 - [Setup & Installation](#setup--installation)
 - [Deployment](#deployment)
 - [Key Implementations](#key-implementations)
-- [Known Limitations](#known-limitations)
 
 ---
 
@@ -56,7 +55,7 @@
 - JWT issued on login, stored in an httpOnly cookie
 - Passwords hashed with bcrypt
 - Routes protected by an `isAuthenticated` middleware that verifies the JWT
-- **Role gating (`student` vs `recruiter`) is enforced on the frontend only**, via a `ProtectedRoute` component that checks `user.role` before rendering admin pages — see [Known Limitations](#known-limitations)
+- Role gating (`student` vs `recruiter`) is enforced both in the frontend and backend. The frontend uses `ProtectedRoute`, while recruiter-only API routes use the `isRecruiter` middleware.
 
 ### 🎨 UI / UX
 - Responsive design with Tailwind CSS
@@ -87,7 +86,7 @@ MatchHire/
 │
 ├── backend/
 │   ├── controllers/        # Route logic (user, company, job, application)
-│   ├── middlewares/        # isAuthenticated.js (JWT check only, no role guard), mutler.js (Multer upload)
+│   ├── middlewares/        # isAuthenticated.js, isRecruiter.js, mutler.js (Multer upload)
 │   ├── models/             # Mongoose schemas (User, Company, Job, Application)
 │   ├── routes/             # API route definitions
 │   ├── utils/              # db.js, cloudinary.js, datauri.js
@@ -107,7 +106,7 @@ MatchHire/
 │       │   ├── auth/         # Login.jsx, Signup.jsx
 │       │   └── ui/           # Reusable ShadCN-style UI primitives
 │       ├── hooks/            # Custom data-fetching hooks
-│       ├── utils/constant.js # Hardcoded API base URLs (see Setup notes)
+│       ├── utils/constant.js # API base URLs with optional VITE_API_BASE_URL override
 │       └── App.jsx           # Route definitions
 │
 └── README.md
@@ -122,7 +121,7 @@ User visits MatchHire
        ↓
 Register / Login (JWT issued, stored in httpOnly cookie)
        ↓
-Role Detection (student / recruiter) — checked client-side after login
+Role Detection (student / recruiter) — checked client-side and enforced server-side
        ↓
      ┌──────────────────────────────────┐
      │ Student (Job Seeker) │  Recruiter (Admin)│
@@ -133,7 +132,7 @@ Role Detection (student / recruiter) — checked client-side after login
        ↓
 Redux state persisted (redux-persist) across 14 frontend routes
        ↓
-MongoDB ← REST API (16 endpoints) → React UI
+MongoDB ← REST API (17 endpoints) → React UI
 ```
 
 ---
@@ -150,16 +149,17 @@ MongoDB ← REST API (16 endpoints) → React UI
 | GET | `/api/v1/job/get/:id` | Get a single job |
 | GET | `/api/v1/job/getadminjobs` | Get jobs created by the logged-in recruiter |
 | POST | `/api/v1/job/post` | Post a new job (auth required) |
+| PUT | `/api/v1/job/update/:id` | Update a job owned by the logged-in recruiter |
 | GET | `/api/v1/application/apply/:id` | Apply to a job (auth required) — **GET, not POST** |
 | GET | `/api/v1/application/get` | Get the logged-in user's applications |
-| GET | `/api/v1/application/:id/applicants` | Get applicants for a job |
-| POST | `/api/v1/application/status/:id/update` | Update an application's status |
-| POST | `/api/v1/company/register` | Register a company |
-| GET | `/api/v1/company/get` | Get companies owned by the logged-in user |
-| GET | `/api/v1/company/get/:id` | Get a single company |
-| PUT | `/api/v1/company/update/:id` | Update a company (incl. logo upload) |
+| GET | `/api/v1/application/:id/applicants` | Get applicants for a job (recruiter only) |
+| POST | `/api/v1/application/status/:id/update` | Update an application's status (recruiter only) |
+| POST | `/api/v1/company/register` | Register a company (recruiter only) |
+| GET | `/api/v1/company/get` | Get companies owned by the logged-in recruiter |
+| GET | `/api/v1/company/get/:id` | Get a single company owned by the logged-in recruiter |
+| PUT | `/api/v1/company/update/:id` | Update a company (incl. logo upload; recruiter only) |
 
-> 16 REST API endpoints total across User, Job, Company, and Application routes. All routes except `register`/`login` require a valid JWT cookie (`isAuthenticated` middleware) — none of them additionally check `role` server-side.
+> 17 REST API endpoints total across User, Job, Company, and Application routes. All protected routes require a valid JWT cookie. Recruiter-only routes additionally use the server-side `isRecruiter` middleware.
 
 ---
 
@@ -179,7 +179,7 @@ cd MatchHire----Job-Hunting-Recruitment-Platform
 npm install
 ```
 
-Create a `.env` file in the **`backend/`** directory:
+Create a `.env` file in the **project root** (next to `package.json`):
 ```env
 PORT=8000
 MONGO_URI=your_mongodb_connection_string
@@ -210,14 +210,14 @@ npm run dev
 
 ## 🚀 Deployment
 
-The application is deployed on **Render** as a **single service**: in production, Express (`backend/index.js`) serves the built React app from `frontend/dist` and handles all `/api/v1/*` routes itself — there's no separate frontend service or `VITE_API_URL` to configure at deploy time.
+The application is deployed on **Render** as a **single service**: in production, Express (`backend/index.js`) serves the built React app from `frontend/dist` and handles all `/api/v1/*` routes itself. The frontend uses same-origin API URLs by default; `VITE_API_BASE_URL` can be supplied when running the frontend separately.
 
 To deploy your own instance:
 1. Create a [Render](https://render.com) account
 2. Connect your GitHub repository
 3. Set the build command to `npm run build` (root script — installs backend + frontend deps and builds the frontend) and the start command to `npm start`
 4. Configure the backend environment variables (`MONGO_URI`, `SECRET_KEY`, Cloudinary keys, `PORT`) in the Render dashboard
-5. Update the hardcoded CORS `origin` in `backend/index.js` and the API URLs in `frontend/src/utils/constant.js` to match your deployed domain before building
+5. Add your deployed frontend origin to the CORS allowlist in `backend/index.js` if the frontend is hosted separately. For a separate frontend deployment, set `VITE_API_BASE_URL` before building.
 
 ---
 
@@ -235,11 +235,9 @@ To deploy your own instance:
 | Recruiter dashboard | ✅ |
 | Applicant status management | ✅ |
 | Redux state persistence (redux-persist) | ✅ |
-| Frontend protected routes | ✅ |
+| Frontend and server-side protected routes | ✅ |
 | Responsive design | ✅ |
 | Animations (Framer Motion) | ✅ |
-
----
 
 ## 👩‍💻 Author
 
